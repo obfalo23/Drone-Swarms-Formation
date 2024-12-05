@@ -10,11 +10,12 @@ pos_err = [pos_err; norm(z-z_star,2)];
 % Formation control noiseless case
 % Initialization
 U = zeros(N,K,2);
-for k = 1:K
+f <= K
     for i = 1:N
         U(i,k,:) = U(i,k,:) - sum(L(i,:)*(z(i,:)-z(:,:)));
         z(i,:) = z(i,:) + dt*U(i,k,:);
     end
+    k = k + 1;
     figure;
     plot_formation(z)
     figure;
