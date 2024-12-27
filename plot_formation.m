@@ -1,4 +1,4 @@
-function plot_formation(z)
+function plot_formation(z, plot_title)
 % this function plots the formation in graph representation for the
 % formation control project of ET4386. The input z should be a N-by-D
 % matrix that contains D-dimensional locations for N agents, e.g., 
@@ -22,11 +22,15 @@ function plot_formation(z)
 
     %target formation
     figure; hold on
+    title(plot_title)
     for i=1:M
         plot(z(edges(:,i),1),z(edges(:,i),2),'k','linewidth',1.5); 
     end
-    for i=1:N
+    for i=2:N
         plot(z(i,1),z(i,2),'r.','markersize',50);
+    end
+    for i=1:1
+        plot(z(i,1),z(i,2),'b.','markersize',50);
     end
     axis([-2 2 -2 2]);
 end
