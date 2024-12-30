@@ -161,59 +161,46 @@ title("Error noise case with first estimator")
 disp("Final error noise case")
 disp(pos_err(end))
 
-%% Formation control Noise case with MLE due to Gaussian noise and linear model estimator
+%% Formation control Noise case with MLE, Gaussian noise and linear model estimator
 
 clear all 
 
 % Initialization
 load('data.mat')
-% Position vector in 2D in time per drone/agent
-%z_pos = zeros(K,N,2);
-
-%z_pos(1,:,:) = z;
-%z = reshape(z_pos(1,:,:), size(z));
-
-% Initialization
-%U = zeros(K,N,2);
-%dist = zeros(K,N,2);
-
+K = 15000;
 % Positional error from the optimum location
 pos_err = zeros(K,1);
 noise_power = 5;
-T = 100;
-H = kron(ones(N),eye(2));
-Rtilde = kron(ones(N),R);
+
+T = 10;
+% Kronicker product of 1x1 and I(7x7) = I(7x7)
+H = kron(ones(1),eye(N));
+% Kronicker product is still R
+Rtilde = kron(ones(1),R);
+z_new = z;
+
 for k = 1:K
     for i = 4:N
+        % Set z_new equal to z
+        z = z_new;
+
         % Generate noise
-        v = noise_power*randn(14)*Rtilde;
-        %CovMatrix = cov(v);
-        %invCovMatrix = inv(CovMatrix);
-
-        % Reshape z_pos per node a 2D matrix
-        %z_i = reshape(z_pos(k,i,:), size(z(i,:)));
-
-        % Calculate the current distance
-        distance = z(i,:)-z+v;
-
-        %calculate thetaHat using the BLUE formula
-        %thetaHat = inv(z * invCovMatrix * z')*z * invCovMatrix * z_pos(k,i,:)';
+        v = noise_power*randn(size(z))*Rtilde;
 
         %MLE formulation
-        y = H*distance;
+        y = H*(z(i,:) - z) + v;
         zHat = (1/T).*H'*y;
+
         % Caluclate the current input
-        %U(k,i,:) = L(i,:)*zHat;
         U = L*zHat;
         % Change position according to input
-        %z_pos(k+1,i,:) = z_pos(k,i,:) + 10*dt*U(k,i,:);
-        z = z + dt*U ;
+        
+        z_new(i,:) = z(i,:) + 10*dt*U(i,:) ;
 
-        % Reshape 2D z_pos per node to fill into z with all nodes
-        %z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
     end
+    
     pos_err(k) = norm(z-z_star,2);
-    %trajectory(k,:,:) = z_pos(k,:,:);
+
 end
 plot_formation(z, "Final state (?? iterations) noise case with MLE estimator");
 
