@@ -2,17 +2,22 @@ clear all
 close all
 clc
 load("data.mat")
+z_org = z;
 
 % Amount of iterations
-%K = 5000;
+dt = 0.01;
+K = 50000;
+noise_power = 1;
+control_law_speed = 1;
 
 % Plot formation and error
 plot_formation(z, "Initial state")
+plot_formation(z_star, "Desired state")
 
 % Position vector in 2D in time per drone/agent
 z_pos = zeros(K,N,2);
 
-z_pos(1,:,:) = z;
+z_pos(1,:,:) = z_org;
 z = reshape(z_pos(1,:,:), size(z));
 
 % Initialization
@@ -21,9 +26,6 @@ dist = zeros(K,N,2);
 
 % Positional error from the optimum location
 pos_err = zeros(K,1);
-
-% Array with the trajectory of one node in 2D
-trajectory = zeros(K,N,2);
 
 % Formation control noiseless case
 for k = 1:K
@@ -35,33 +37,31 @@ for k = 1:K
         U(k,i,:) = L(i,:)*(z_i-z);
 
         % Change position according to input
-        z_pos(k+1,i,:) = z_pos(k,i,:) + 10*dt*U(k,i,:);
+        z_pos(k+1,i,:) = z_pos(k,i,:) + control_law_speed*dt*U(k,i,:);
 
         % Reshape 2D z_pos per node to fill into z with all nodes
         z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
     end
     pos_err(k) = norm(z-z_star,2);
-    trajectory(k,:,:) = z_pos(k,:,:);
 end
-plot_formation(z, "Final state (1500 iterations) noiseless case");
+plot_formation(z, "Final state, noiseless case");
+
+z_pos(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
+plot_formation_trajectory(z_pos,"Final state, noiseless case");
 
 figure
 plot(pos_err)
 yscale("log")
-title("Error noiseless case")
+grid("on")
+ylabel("Procrutes error")
+xlabel("Time")
+title("Error, noiseless case")
 
-disp("Final error noiseless case")
+disp("Final error, noiseless case")
 disp(pos_err(end))
 
 %% Formation control Noise case
-clear all 
-
-% Initialization
-load('data.mat')
-% Position vector in 2D in time per drone/agent
-z_pos = zeros(K,N,2);
-
-z_pos(1,:,:) = z;
+z_pos(1,:,:) = z_org;
 z = reshape(z_pos(1,:,:), size(z));
 
 % Initialization
@@ -70,7 +70,6 @@ dist = zeros(K,N,2);
 
 % Positional error from the optimum location
 pos_err = zeros(K,1);
-noise_power = 5;
 
 for k = 1:K
     for i = 4:N
@@ -84,33 +83,32 @@ for k = 1:K
         U(k,i,:) = L(i,:)*(z_i-z+v);
 
         % Change position according to input
-        z_pos(k+1,i,:) = z_pos(k,i,:) + 10*dt*U(k,i,:);
+        z_pos(k+1,i,:) = z_pos(k,i,:) + control_law_speed*dt*U(k,i,:);
 
         % Reshape 2D z_pos per node to fill into z with all nodes
         z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
     end
     pos_err(k) = norm(z-z_star,2);
-    trajectory(k,:,:) = z_pos(k,:,:);
 end
-plot_formation(z, "Final state (1500 iterations) noise case");
+plot_formation(z, "Final state, noise case");
+
+z_pos(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
+plot_formation_trajectory(z_pos,"Final state, noise case");
 
 figure
 plot(pos_err)
 yscale("log")
-title("Error noise case")
+grid("on")
+ylabel("Procrutes error")
+xlabel("Time")
+title("Error, noise case")
 
-disp("Final error noise case")
+disp("Final error, noise case")
 disp(pos_err(end))
 
 %% Formation control Noise case with averaging over 10 samples estimator
-clear all 
 
-% Initialization
-load('data.mat')
-% Position vector in 2D in time per drone/agent
-z_pos = zeros(K,N,2);
-
-z_pos(1,:,:) = z;
+z_pos(1,:,:) = z_org;
 z = reshape(z_pos(1,:,:), size(z));
 
 % Initialization
@@ -119,8 +117,7 @@ dist = zeros(K,N,2);
 
 % Positional error from the optimum location
 pos_err = zeros(K,1);
-MA_size = 10;
-noise_power = 5;
+MA_size = 2;
 
 for k = 1:K
     for i = 4:N
@@ -144,40 +141,40 @@ for k = 1:K
         U(k,i,:) = L(i,:)*distance_reshaped;
 
         % Change position according to input
-        z_pos(k+1,i,:) = z_pos(k,i,:) + 10*dt*U(k,i,:);
+        z_pos(k+1,i,:) = z_pos(k,i,:) + control_law_speed*dt*U(k,i,:);
+
         % Reshape 2D z_pos per node to fill into z with all nodes
         z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
     end
     pos_err(k) = norm(z-z_star,2);
-    trajectory(k,:,:) = z_pos(k,:,:);
 end
-plot_formation(z, "Final state (1500 iterations) noise case with first estimator");
+plot_formation(z, "Final state, noise case with MA estimator");
+
+z_pos(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
+plot_formation_trajectory(z_pos, "Final state, noise case with MA estimator");
 
 figure
 plot(pos_err)
 yscale("log")
-title("Error noise case with first estimator")
+grid("on")
+ylabel("Procrutes error")
+xlabel("Time")
+title("Error, noise case with MA estimator")
 
-disp("Final error noise case")
+disp("Final error, noise case with MA estimator")
 disp(pos_err(end))
 
 %% Formation control Noise case with MLE, Gaussian noise and linear model estimator
 
-clear all 
-
-% Initialization
-load('data.mat')
-K = 15000;
 % Positional error from the optimum location
 pos_err = zeros(K,1);
-noise_power = 5;
 
-T = 10;
+T = 7;
 % Kronicker product of 1x1 and I(7x7) = I(7x7)
 H = kron(ones(1),eye(N));
 % Kronicker product is still R
 Rtilde = kron(ones(1),R);
-z_new = z;
+z_new = z_org;
 
 for k = 1:K
     for i = 4:N
@@ -193,21 +190,24 @@ for k = 1:K
 
         % Caluclate the current input
         U = L*zHat;
+
         % Change position according to input
-        
-        z_new(i,:) = z(i,:) + 10*dt*U(i,:) ;
+        z_new(i,:) = z(i,:) + control_law_speed*dt*U(i,:) ;
 
     end
     
     pos_err(k) = norm(z-z_star,2);
 
 end
-plot_formation(z, "Final state (?? iterations) noise case with MLE estimator");
+plot_formation(z, "Final state, noise case with MLE estimator");
+
+% z_new(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
+% plot_formation_trajectory(z_new, "Final state, noise case with MLE estimator");
 
 figure
 plot(pos_err)
 yscale("log")
-title("Error noise case with MLE estimator")
+title("Error, noise case with MLE estimator")
 
-disp("Final error MLE noise case")
+disp("Final error, MLE noise case")
 disp(pos_err(end))

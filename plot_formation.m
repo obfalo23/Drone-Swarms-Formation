@@ -23,14 +23,19 @@ function plot_formation(z, plot_title)
     %target formation
     figure; hold on
     title(plot_title)
+    grid("on")
+    xlabel("x")
+    ylabel("y")
     for i=1:M
         plot(z(edges(:,i),1),z(edges(:,i),2),'k','linewidth',1.5); 
     end
-    for i=2:N
+    for i=4:N
         plot(z(i,1),z(i,2),'r.','markersize',50);
+        text(z(i,1)+0.1,z(i,2)+0.1,[num2str(i)]);
     end
-    for i=1:1
+    for i=1:3
         plot(z(i,1),z(i,2),'b.','markersize',50);
+        text(z(i,1)+0.1,z(i,2)+0.1,[num2str(i)]);
     end
     axis([-2 2 -2 2]);
 end
