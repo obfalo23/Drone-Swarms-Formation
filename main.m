@@ -6,9 +6,9 @@ z_org = z;
 
 % Amount of iterations
 dt = 0.01;
-K = 50000;
+K = 10000;
 noise_power = 1;
-control_law_speed = 1;
+control_law_speed = 10;
 
 % Plot formation and error
 plot_formation(z, "Initial state")
@@ -16,7 +16,6 @@ plot_formation(z_star, "Desired state")
 
 % Position vector in 2D in time per drone/agent
 z_pos = zeros(K,N,2);
-
 z_pos(1,:,:) = z_org;
 z = reshape(z_pos(1,:,:), size(z));
 
@@ -44,7 +43,7 @@ for k = 1:K
     end
     pos_err(k) = norm(z-z_star,2);
 end
-plot_formation(z, "Final state, noiseless case");
+% plot_formation(z, "Final state, noiseless case");
 
 z_pos(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
 plot_formation_trajectory(z_pos,"Final state, noiseless case");
@@ -61,6 +60,9 @@ disp("Final error, noiseless case")
 disp(pos_err(end))
 
 %% Formation control Noise case
+
+% Position vector in 2D in time per drone/agent
+z_pos = zeros(K,N,2);
 z_pos(1,:,:) = z_org;
 z = reshape(z_pos(1,:,:), size(z));
 
@@ -90,7 +92,7 @@ for k = 1:K
     end
     pos_err(k) = norm(z-z_star,2);
 end
-plot_formation(z, "Final state, noise case");
+% plot_formation(z, "Final state, noise case");
 
 z_pos(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
 plot_formation_trajectory(z_pos,"Final state, noise case");
@@ -108,6 +110,8 @@ disp(pos_err(end))
 
 %% Formation control Noise case with averaging over 10 samples estimator
 
+% Position vector in 2D in time per drone/agent
+z_pos = zeros(K,N,2);
 z_pos(1,:,:) = z_org;
 z = reshape(z_pos(1,:,:), size(z));
 
@@ -117,7 +121,7 @@ dist = zeros(K,N,2);
 
 % Positional error from the optimum location
 pos_err = zeros(K,1);
-MA_size = 2;
+MA_size = 10;
 
 for k = 1:K
     for i = 4:N
@@ -148,7 +152,7 @@ for k = 1:K
     end
     pos_err(k) = norm(z-z_star,2);
 end
-plot_formation(z, "Final state, noise case with MA estimator");
+% plot_formation(z, "Final state, noise case with MA estimator");
 
 z_pos(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
 plot_formation_trajectory(z_pos, "Final state, noise case with MA estimator");
@@ -166,43 +170,60 @@ disp(pos_err(end))
 
 %% Formation control Noise case with MLE, Gaussian noise and linear model estimator
 
+% Position vector in 2D in time per drone/agent
+z_pos = zeros(K,N,2);
+z_pos(1,:,:) = z_org;
+z = reshape(z_pos(1,:,:), size(z));
+
+% Initialization
+U = zeros(K,N,2);
+dist = zeros(K,N,2);
+
 % Positional error from the optimum location
 pos_err = zeros(K,1);
 
-T = 7;
-% Kronicker product of 1x1 and I(7x7) = I(7x7)
-H = kron(ones(1),eye(N));
-% Kronicker product is still R
-Rtilde = kron(ones(1),R);
-z_new = z_org;
+T = 100;
+D = 2;
+t_vec = linspace(1,1,T)';
+zHat = zeros(N,D);
+
+% Kronicker product of 1_T and I_D
+H = kron(t_vec,eye(D));
+
+% Kronicker product of 1_D and R
+Rtilde = kron(eye(T),R);
 
 for k = 1:K
     for i = 4:N
-        % Set z_new equal to z
-        z = z_new;
+        % Reshape z_pos per node a 2D matrix
+        z_i = reshape(z_pos(k,i,:), size(z(i,:)));
+        
+        for j = 1:N %Can be faster by only using neighbours
+            if L(i,j) ~= 0
+                % Generate noise
+                v = noise_power*Rtilde*randn(D*T,1);
 
-        % Generate noise
-        v = noise_power*randn(size(z))*Rtilde;
-
-        %MLE formulation
-        y = H*(z(i,:) - z) + v;
-        zHat = (1/T).*H'*y;
+                y = H*(z_i - z(j,:))' + v;
+                zHat(j,:) = (1/(T))*H'*y;
+            end
+        end
 
         % Caluclate the current input
-        U = L*zHat;
+        U(k,i,:) = L(i,:)*zHat;
 
         % Change position according to input
-        z_new(i,:) = z(i,:) + control_law_speed*dt*U(i,:) ;
-
+        z_pos(k+1,i,:) = z_pos(k,i,:) + control_law_speed*dt*U(k,i,:);
+        
+        % Reshape 2D z_pos per node to fill into z with all nodes
+        z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
     end
-    
     pos_err(k) = norm(z-z_star,2);
 
 end
-plot_formation(z, "Final state, noise case with MLE estimator");
+% plot_formation(z, "Final state, noise case with MLE estimator");
 
-% z_new(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
-% plot_formation_trajectory(z_new, "Final state, noise case with MLE estimator");
+z_pos(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
+plot_formation_trajectory(z_pos, "Final state, noise case with MLE estimator");
 
 figure
 plot(pos_err)
