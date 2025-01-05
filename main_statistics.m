@@ -5,15 +5,14 @@ load("data.mat")
 z_org = z;
 
 % Parameters
-dt = 0.01;
-K = 50000;
+dt = 0.1;
+K = 5000;
 noise_power = 1;
-control_law_speed = 1;
-maxTime = K * dt * control_law_speed; %in sec
+maxTime = K * dt; %in sec
 
 % Start the statistics routine here
-M = 5;
-Pro_error_struct = zeros(5,M,K);
+M = 50;
+error_struct = zeros(5,M,K);
 for m = 1:M
     %% Formation control Noiseless case
     % Position vector in 2D in time per drone/agent
@@ -38,7 +37,7 @@ for m = 1:M
             U(k,i,:) = L(i,:)*(z_i-z);
     
             % Change position according to input
-            z_pos(k+1,i,:) = z_pos(k,i,:) + control_law_speed*dt*U(k,i,:);
+            z_pos(k+1,i,:) = z_pos(k,i,:) + dt*U(k,i,:);
     
             % Reshape 2D z_pos per node to fill into z with all nodes
             z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
@@ -47,7 +46,7 @@ for m = 1:M
     end
     
     % Add the error curve
-    Pro_error_struct(1,m,:) = pos_err;
+    error_struct(1,m,:) = pos_err;
 
     %% Formation control Noise case
     
@@ -75,7 +74,7 @@ for m = 1:M
             U(k,i,:) = L(i,:)*(z_i-z+v);
     
             % Change position according to input
-            z_pos(k+1,i,:) = z_pos(k,i,:) + control_law_speed*dt*U(k,i,:);
+            z_pos(k+1,i,:) = z_pos(k,i,:) + dt*U(k,i,:);
     
             % Reshape 2D z_pos per node to fill into z with all nodes
             z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
@@ -84,7 +83,7 @@ for m = 1:M
     end
     
     % Add the error curve
-    Pro_error_struct(2,m,:) = pos_err;
+    error_struct(2,m,:) = pos_err;
 
     %% Formation control Noise case with averaging over 10 samples estimator
     
@@ -123,7 +122,7 @@ for m = 1:M
             U(k,i,:) = L(i,:)*distance_reshaped;
     
             % Change position according to input
-            z_pos(k+1,i,:) = z_pos(k,i,:) + control_law_speed*dt*U(k,i,:);
+            z_pos(k+1,i,:) = z_pos(k,i,:) + dt*U(k,i,:);
     
             % Reshape 2D z_pos per node to fill into z with all nodes
             z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
@@ -132,7 +131,7 @@ for m = 1:M
     end
      
     % Add the error curve
-    Pro_error_struct(3,m,:) = pos_err;
+    error_struct(3,m,:) = pos_err;
 
     %% Formation control Noise case with MLE, Gaussian noise and linear model estimator
     
@@ -178,7 +177,7 @@ for m = 1:M
             U(k,i,:) = L(i,:)*zHat;
     
             % Change position according to input
-            z_pos(k+1,i,:) = z_pos(k,i,:) + control_law_speed*dt*U(k,i,:);
+            z_pos(k+1,i,:) = z_pos(k,i,:) + dt*U(k,i,:);
             
             % Reshape 2D z_pos per node to fill into z with all nodes
             z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
@@ -188,7 +187,7 @@ for m = 1:M
     end
     
     % Add the error curve
-    Pro_error_struct(4,m,:) = pos_err;
+    error_struct(4,m,:) = pos_err;
 
     %% Formation control Noise case with MLE, Gaussian noise and linear model estimator
     
@@ -234,7 +233,7 @@ for m = 1:M
             U(k,i,:) = L(i,:)*zHat;
     
             % Change position according to input
-            z_pos(k+1,i,:) = z_pos(k,i,:) + control_law_speed*dt*U(k,i,:);
+            z_pos(k+1,i,:) = z_pos(k,i,:) + dt*U(k,i,:);
             
             % Reshape 2D z_pos per node to fill into z with all nodes
             z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
@@ -244,18 +243,18 @@ for m = 1:M
     end
     
     % Add the error curve
-    Pro_error_struct(5,m,:) = pos_err;
+    error_struct(5,m,:) = pos_err;
     
     % Loading bar progress
     m
 end
 
 %% Plotting
-plot_noiseless_case = reshape(mean(Pro_error_struct(1,:,:),2),K,1);
-plot_noise_case = reshape(mean(Pro_error_struct(2,:,:),2),K,1);
-plot_MA = reshape(mean(Pro_error_struct(3,:,:),2),K,1);
-plot_MLE = reshape(mean(Pro_error_struct(4,:,:),2),K,1);
-plot_MLE_100 = reshape(mean(Pro_error_struct(5,:,:),2),K,1);
+plot_noiseless_case = reshape(mean(error_struct(1,:,:),2),K,1);
+plot_noise_case = reshape(mean(error_struct(2,:,:),2),K,1);
+plot_MA = reshape(mean(error_struct(3,:,:),2),K,1);
+plot_MLE = reshape(mean(error_struct(4,:,:),2),K,1);
+plot_MLE_100 = reshape(mean(error_struct(5,:,:),2),K,1);
 
 time = linspace(0,maxTime,K);
 figure
@@ -273,7 +272,7 @@ hold on;
 
 yscale("log")
 grid("on")
-ylabel("Procrutes error")
+ylabel("Error")
 xlabel("Time [s]")
 title("Mean convergence over 50 runs")
 legend("AutoUpdate","on")
