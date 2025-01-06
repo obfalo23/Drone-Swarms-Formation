@@ -172,6 +172,92 @@ title("Convergence rate of MA estimator (LP size = 10)")
 disp("Final error, noise case with MA estimator")
 disp(pos_err(end))
 
+
+%% Formation control Noise case with adaptive Moving Averaging estimator
+
+% Position vector in 2D in time per drone/agent
+z_pos = zeros(K,N,2);
+z_pos(1,:,:) = z_org;
+z = reshape(z_pos(1,:,:), size(z));
+
+% Initialization
+U = zeros(K,N,2);
+dist = zeros(K,N,2);
+
+% Positional error from the optimum location
+pos_err = zeros(K,1);
+MA_size = 10;
+
+for k = 1:K
+    for i = 4:N
+        % Generate noise
+        v = noise_power*randn(size(z))*R;
+
+        % Reshape z_pos per node a 2D matrix
+        z_i = reshape(z_pos(k,i,:), size(z(i,:)));
+
+        % Calculate the current distance
+        dist(k,:,:) = z_i-z+v;
+
+        % Apply moving average
+        if k <= MA_size
+            distance = sum(dist(1:k,:,:),1) / k;
+        else
+            distance = sum(dist(k-MA_size:k,:,:),1) / MA_size;
+        end
+        distance_reshaped = reshape(distance,7,2);
+
+        % Caluclate the current input
+        U(k,i,:) = L(i,:)*distance_reshaped;
+
+        % Change position according to input
+        z_pos(k+1,i,:) = z_pos(k,i,:) + dt*U(k,i,:);
+
+        % Reshape 2D z_pos per node to fill into z with all nodes
+        z(i,:) = reshape(z_pos(k+1,i,:), size(z(i,:)));
+    end
+
+    % Increase window size when we are close to the desired location
+    %if mod(k,5) == 0
+    % if k > 100
+    %     if pos_err(k-1) < pos_err(k-2) && pos_err(k-1) < 0.1
+    %         MA_size = MA_size + 1;
+    %     else
+    %         if MA_size >= 10
+    %             MA_size = MA_size - 1;
+    %         end
+    %     end
+    % end
+    if k > 100
+        if k > 40000
+        
+            MA_size = round(1/pos_err(k-1));
+        else
+            if pos_err(k-1) < 0.1
+                MA_size = round(1/pos_err(k-1));
+            end
+        end
+    end
+
+    MA_size
+    %Error
+    pos_err(k) = norm(z-z_star,2);
+end
+% plot_formation(z, "Final state, noise case with adaptive MA estimator");
+
+z_pos(end,1:3,:) = z_org(1:3,:); %Fill the start positions of the first 3 nodes
+plot_formation_trajectory(z_pos, "Final state, noise case with adaptive MA estimator");
+
+figure
+plot(time, pos_err);
+yscale("log")
+grid("on")
+ylabel("Error")
+xlabel("Time [s]")
+title("Convergence rate of adaptive MA estimator")
+
+disp("Final error, noise case with adaptive MA estimator")
+disp(pos_err(end))
 %% Formation control Noise case with MLE, Gaussian noise and linear model estimator
 
 % Position vector in 2D in time per drone/agent
